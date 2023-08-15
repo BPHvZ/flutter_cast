@@ -23,7 +23,8 @@ class CastDiscoveryService {
     await discovery.start();
 
     discovery.eventStream!.listen((event) {
-      if (event.type == BonsoirDiscoveryEventType.discoveryServiceResolved) {
+      if (event.type == BonsoirDiscoveryEventType.discoveryServiceFound ||
+          event.type == BonsoirDiscoveryEventType.discoveryServiceResolved) {
         if (event.service == null || event.service?.attributes == null) {
           return;
         }
