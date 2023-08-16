@@ -7,9 +7,10 @@ environment:
   sdk: ">=2.12.0 <3.0.0"
 
 dependencies:
-  bonsoir: ^3.0.0+1
+  bonsoir: ^1.0.1+1
   flutter:
     sdk: flutter
+  multicast_dns: ^0.3.2+3
   protobuf: ^2.0.0
 
 dev_dependencies:
