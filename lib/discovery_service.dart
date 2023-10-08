@@ -7,14 +7,30 @@ import 'device.dart';
 
 const _domain = '_googlecast._tcp';
 
+//function that dedupes results
+List<CastDevice> _dedupe(List<CastDevice> results) {
+  final resultsMap = <String, CastDevice>{};
+  for (final result in results) {
+    final key = '${result.host}:${result.port}';
+    if (resultsMap.containsKey(key)) {
+      if (result.extras.isNotEmpty) {
+        resultsMap[key] = result;
+      }
+    } else {
+      resultsMap[key] = result;
+    }
+  }
+  return resultsMap.values.toList();
+}
+
 class CastDiscoveryService {
   static final CastDiscoveryService _instance = CastDiscoveryService._();
-  CastDiscoveryService._();
   final MDnsClient client = MDnsClient();
-
   factory CastDiscoveryService() {
     return _instance;
   }
+
+  CastDiscoveryService._();
 
   Future<List<CastDevice>> search(
       {Duration timeout = const Duration(seconds: 5)}) async {
@@ -24,8 +40,8 @@ class CastDiscoveryService {
     await discovery.ready;
     await client.start();
     discovery.eventStream!.listen((event) async {
-      if (event.type == BonsoirDiscoveryEventType.DISCOVERY_SERVICE_RESOLVED ||
-          event.type == BonsoirDiscoveryEventType.DISCOVERY_SERVICE_FOUND) {
+      if (event.type == BonsoirDiscoveryEventType.discoveryServiceResolved ||
+          event.type == BonsoirDiscoveryEventType.discoveryServiceFound) {
         if (event.service == null || event.service?.attributes == null) {
           return;
         }
@@ -45,7 +61,7 @@ class CastDiscoveryService {
         if (host == null) {
           await for (SrvResourceRecord srv in client.lookup<SrvResourceRecord>(
               ResourceRecordQuery.service(
-                  event.service!.name + "._googlecast._tcp.local"))) {
+                  event.service!.name + '._googlecast._tcp.local'))) {
             await for (IPAddressResourceRecord ip
                 in client.lookup<IPAddressResourceRecord>(
                     ResourceRecordQuery.addressIPv4(srv.target))) {
@@ -87,8 +103,8 @@ class CastDiscoveryService {
     final controller = StreamController<List<CastDevice>>();
 
     discovery.eventStream!.listen((event) async {
-      if (event.type == BonsoirDiscoveryEventType.DISCOVERY_SERVICE_RESOLVED ||
-          event.type == BonsoirDiscoveryEventType.DISCOVERY_SERVICE_FOUND) {
+      if (event.type == BonsoirDiscoveryEventType.discoveryServiceResolved ||
+          event.type == BonsoirDiscoveryEventType.discoveryServiceFound) {
         if (event.service == null || event.service?.attributes == null) {
           return;
         }
@@ -106,7 +122,7 @@ class CastDiscoveryService {
         if (host == null) {
           await for (SrvResourceRecord srv in client.lookup<SrvResourceRecord>(
               ResourceRecordQuery.service(
-                  event.service!.name + "._googlecast._tcp.local"))) {
+                  event.service!.name + '._googlecast._tcp.local'))) {
             await for (IPAddressResourceRecord ip
                 in client.lookup<IPAddressResourceRecord>(
                     ResourceRecordQuery.addressIPv4(srv.target))) {
@@ -138,27 +154,11 @@ class CastDiscoveryService {
     await discovery.start();
     unawaited(Future.delayed(timeout).then((value) async {
       controller.add(_dedupe(results));
-      controller.close();
+      await controller.close();
       await discovery.stop();
       client.stop();
     }));
 
     yield* controller.stream;
   }
-}
-
-//function that dedupes results
-List<CastDevice> _dedupe(List<CastDevice> results) {
-  final resultsMap = <String, CastDevice>{};
-  for (final result in results) {
-    final key = '${result.host}:${result.port}';
-    if (resultsMap.containsKey(key)) {
-      if (result.extras.isNotEmpty) {
-        resultsMap[key] = result;
-      }
-    } else {
-      resultsMap[key] = result;
-    }
-  }
-  return resultsMap.values.toList();
 }
